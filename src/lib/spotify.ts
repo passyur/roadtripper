@@ -12,7 +12,9 @@ export class SpotifyError extends Error {
 }
 
 // Dev: Vite middleware. Production: the Cloudflare Worker in worker/ (static hosting can't keep the secret).
-const TOKEN_URL: string = import.meta.env.VITE_TOKEN_URL || '/api/spotify-token';
+const TOKEN_URL: string = import.meta.env.VITE_TOKEN_URL || (import.meta.env.DEV ? '/api/spotify-token' : '');
+
+const LOGGED_OUT_SEARCH_DOWN = "Search without logging in isn't available right now. Log in with Spotify to search.";
 
 let appToken: { access_token: string; expires_at: number } | null = null;
 
@@ -21,9 +23,12 @@ async function catalogToken(): Promise<string> {
   const user = await getUserToken();
   if (user) return user;
   if (!appToken || appToken.expires_at - 30_000 < Date.now()) {
-    const res = await fetch(TOKEN_URL);
-    const body = await res.json();
-    if (!res.ok) throw new SpotifyError(body.error ?? 'Search is unavailable', res.status);
+    if (!TOKEN_URL) throw new SpotifyError(LOGGED_OUT_SEARCH_DOWN, 503);
+    // Network errors, non-2xx and non-JSON responses (e.g. a host's HTML 404 page) all mean the proxy is unusable.
+    const body = await fetch(TOKEN_URL)
+      .then((res) => (res.ok ? res.json() : null))
+      .catch(() => null);
+    if (!body?.access_token) throw new SpotifyError(LOGGED_OUT_SEARCH_DOWN, 503);
     appToken = body;
   }
   return appToken!.access_token;

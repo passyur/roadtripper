@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createPlaylist, getEditablePlaylists, getPlaylistTracks, replacePlaylistItems } from './spotify';
+import { getUserToken } from './auth';
+import { createPlaylist, getEditablePlaylists, getPlaylistTracks, replacePlaylistItems, searchTracks } from './spotify';
 
-vi.mock('./auth', () => ({ getUserToken: async () => 'user-token' }));
+vi.mock('./auth', () => ({ getUserToken: vi.fn(async () => 'user-token') }));
 
 const track = (id: string) => ({
   id, type: 'track', uri: `spotify:track:${id}`, name: `Song ${id}`, duration_ms: 1000,
@@ -20,7 +21,10 @@ function mockFetch(handler: (url: string, method: string) => unknown) {
   }));
 }
 
-beforeEach(() => vi.unstubAllGlobals());
+beforeEach(() => {
+  vi.unstubAllGlobals();
+  vi.mocked(getUserToken).mockResolvedValue('user-token');
+});
 afterEach(() => vi.unstubAllGlobals());
 
 describe('replacePlaylistItems', () => {
@@ -80,5 +84,31 @@ describe('getEditablePlaylists', () => {
     mockFetch(() => ({ items: [p('mine', 'me'), p('theirs', 'other'), p('shared', 'other', true), null], next: null }));
     const out = await getEditablePlaylists({ id: 'me', name: 'Me' });
     expect(out.map((x) => x.id)).toEqual(['mine', 'shared']);
+  });
+});
+
+describe('searchTracks when logged out', () => {
+  it('explains that login is needed when the token proxy returns a non-JSON page', async () => {
+    vi.mocked(getUserToken).mockResolvedValue(null);
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('<!DOCTYPE html><title>404</title>', { status: 404, headers: { 'Content-Type': 'text/html' } })));
+    await expect(searchTracks('washington')).rejects.toThrow(/Log in with Spotify to search/);
+  });
+
+  it('explains the same when the proxy is unreachable', async () => {
+    vi.mocked(getUserToken).mockResolvedValue(null);
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('Load failed'); }));
+    await expect(searchTracks('washington')).rejects.toThrow(/Log in with Spotify to search/);
+  });
+
+  it('searches with the proxy token when it works', async () => {
+    vi.mocked(getUserToken).mockResolvedValue(null);
+    mockFetch((url) =>
+      url.includes('spotify-token')
+        ? { access_token: 'app-token', expires_at: Date.now() + 3_600_000 }
+        : { tracks: { items: [track('w')] } },
+    );
+    const results = await searchTracks('washington');
+    expect(results.map((t) => t.id)).toEqual(['w']);
+    expect(calls[1].url).toContain('/search?q=washington');
   });
 });
