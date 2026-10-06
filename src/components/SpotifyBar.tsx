@@ -1,16 +1,15 @@
 import { useState } from 'react';
 import { SPOTIFY_CLIENT_ID } from '../lib/auth';
 import { savePlaylist, signOut, startLogin } from '../store/spotifyActions';
-import { useTripStore } from '../store/useTripStore';
+import { useTrip, useTripStore } from '../store/useTripStore';
 import { ImportDialog } from './ImportDialog';
 import { SpotifyIcon } from './icons';
 
-/** Account state plus the Save / Import / New actions for the playlist. */
+/** Account state plus Save / Import for the active trip's playlist. */
 export function SpotifyBar() {
   const user = useTripStore((s) => s.user);
-  const source = useTripStore((s) => s.source);
-  const dirty = useTripStore((s) => s.dirty);
-  const loadPlaylist = useTripStore((s) => s.loadPlaylist);
+  const source = useTrip((t) => t.source);
+  const dirty = useTrip((t) => t.dirty);
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
 
@@ -20,11 +19,6 @@ export function SpotifyBar() {
     setSaving(true);
     await savePlaylist(mode);
     setSaving(false);
-  };
-
-  const startNew = () => {
-    if (dirty && !confirm('Start a new playlist? Unsaved changes will be lost.')) return;
-    loadPlaylist([], 'New roadtrip', { kind: 'draft' });
   };
 
   if (!user) {
@@ -55,7 +49,6 @@ export function SpotifyBar() {
         </button>
       )}
       <button className="link-button" onClick={() => setImporting(true)}>Import</button>
-      <button className="link-button" onClick={startNew}>New</button>
       <span className="spotify-bar__user" title={`Logged in as ${user.name}`}>
         {user.imageUrl ? <img src={user.imageUrl} alt="" /> : <span className="avatar">{user.name[0]}</span>}
         <button className="link-button" onClick={signOut}>Log out</button>

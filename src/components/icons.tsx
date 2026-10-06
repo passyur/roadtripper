@@ -41,3 +41,23 @@ export const SpotifyIcon = () => (
 export const ExternalIcon = () => (
   <svg {...base} width={12} height={12}><path d="M6.5 3.5h-3v9h9v-3M9 3.5h3.5V7M12.5 3.5L7.5 8.5" {...stroke} /></svg>
 );
+
+export const ChevronDownIcon = () => (
+  <svg {...base}><path d="M3.5 6l4.5 4.5L12.5 6" {...stroke} /></svg>
+);
+
+export const CheckIcon = () => (
+  <svg {...base}><path d="M3.5 8.5l3 3 6-7" {...stroke} /></svg>
+);
+
+export const CopyIcon = () => (
+  <svg {...base}><rect x="5.5" y="5.5" width="8" height="8" rx="1.5" {...stroke} /><path d="M10.5 3.5v-.5a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h.5" {...stroke} /></svg>
+);
+
+export const TrashIcon = () => (
+  <svg {...base}><path d="M2.5 4.5h11M6 4.5V3h4v1.5M4 4.5l.7 9h6.6l.7-9" {...stroke} /></svg>
+);
+
+export const ShareIcon = () => (
+  <svg {...base}><path d="M8 10V2.5M5 5l3-3 3 3M3.5 8v5h9V8" {...stroke} /></svg>
+);

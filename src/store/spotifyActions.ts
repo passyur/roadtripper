@@ -1,7 +1,7 @@
 import { completeLoginIfRedirected, isLoggedIn, login, logout } from '../lib/auth';
 import { createPlaylist, getMe, getPlaylistTracks, renamePlaylist, replacePlaylistItems, type PlaylistSummary } from '../lib/spotify';
 import { notify, notifyError } from './useNotice';
-import { useTripStore } from './useTripStore';
+import { activeTrip, useTripStore } from './useTripStore';
 
 const PENDING_SAVE = 'roadtripper.saveAfterLogin';
 
@@ -41,9 +41,10 @@ export function signOut(): void {
  * 'new' always creates a new private playlist.
  */
 export async function savePlaylist(mode: 'update' | 'new'): Promise<boolean> {
-  const { playlist, playlistName, source, stops, markSaved } = useTripStore.getState();
+  const { markSaved } = useTripStore.getState();
+  const { id: tripId, playlist, name: tripName, source, stops } = activeTrip(useTripStore.getState());
   const uris = playlist.flatMap((e) => (e.uri ? [e.uri] : []));
-  const name = playlistName.trim() || 'Roadtrip';
+  const name = tripName.trim() || 'Roadtrip';
 
   try {
     if (mode === 'update' && source.kind === 'spotify') {
@@ -58,13 +59,13 @@ export async function savePlaylist(mode: 'update' | 'new'): Promise<boolean> {
       }
       await replacePlaylistItems(source.id, uris);
       if (name !== source.savedName) await renamePlaylist(source.id, name);
-      markSaved({ ...source, savedName: name, skipped: 0 });
+      markSaved(tripId, { ...source, savedName: name, skipped: 0 });
       notify('Saved to Spotify', { link: { href: source.url, label: 'Open' } });
     } else {
       const ends = stops.filter((s) => s.coord).map((s) => s.label.split(',')[0]);
       const description = ends.length >= 2 ? `${ends[0]} → ${ends.at(-1)}, planned with Roadtripper` : 'Planned with Roadtripper';
       const created = await createPlaylist(name, description, uris);
-      markSaved({ kind: 'spotify', id: created.id, url: created.url, savedName: name, skipped: 0 });
+      markSaved(tripId, { kind: 'spotify', id: created.id, url: created.url, savedName: name, skipped: 0 });
       notify(`Created “${name}” in your Spotify library`, { link: { href: created.url, label: 'Open' } });
     }
     return true;
@@ -74,9 +75,22 @@ export async function savePlaylist(mode: 'update' | 'new'): Promise<boolean> {
   }
 }
 
+/** Opens a Spotify playlist as a new trip on the current route (or switches to the trip already linked to it). */
 export async function importPlaylist(p: PlaylistSummary): Promise<void> {
+  const state = useTripStore.getState();
+  const existing = state.trips.find((t) => t.source.kind === 'spotify' && t.source.id === p.id);
+  if (existing) {
+    state.switchTrip(existing.id);
+    notify(`“${existing.name}” is already open`);
+    return;
+  }
   const { tracks, skipped } = await getPlaylistTracks(p.id);
-  useTripStore.getState().loadPlaylist(tracks, p.name, { kind: 'spotify', id: p.id, url: p.url, savedName: p.name, skipped });
+  useTripStore.getState().addTrip({
+    name: p.name,
+    stops: activeTrip(useTripStore.getState()).stops,
+    tracks,
+    source: { kind: 'spotify', id: p.id, url: p.url, savedName: p.name, skipped },
+  });
   notify(
     skipped
       ? `Imported “${p.name}”. ${skipped} podcast episode(s) or local file(s) aren't shown.`

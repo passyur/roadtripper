@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
-import { useTripStore } from './store/useTripStore';
+import { useTrip, useTripStore } from './store/useTripStore';
 import { fetchRoute, MAPBOX_TOKEN } from './lib/mapbox';
 import { segmentRoute } from './lib/segmentRoute';
 import { MapView } from './components/MapView';
@@ -9,6 +9,7 @@ import { PlaylistPanel } from './components/PlaylistPanel';
 import { ChevronRightIcon, ListIcon } from './components/icons';
 import { NoticeToast } from './components/NoticeToast';
 import { initSpotifySession } from './store/spotifyActions';
+import { openSharedTripFromUrl } from './store/shareActions';
 
 // Module-level so React StrictMode's double effect doesn't run the login handshake twice.
 let session: Promise<void> | null = null;
@@ -17,11 +18,15 @@ export default function App() {
   useRouteFetcher();
   useEffect(() => {
     session ??= initSpotifySession();
+    // Share links work on load and when pasted into the address bar of an already-open app.
+    openSharedTripFromUrl();
+    window.addEventListener('hashchange', openSharedTripFromUrl);
+    return () => window.removeEventListener('hashchange', openSharedTripFromUrl);
   }, []);
 
   const route = useTripStore((s) => s.route);
-  const stops = useTripStore((s) => s.stops);
-  const playlist = useTripStore((s) => s.playlist);
+  const stops = useTrip((t) => t.stops);
+  const playlist = useTrip((t) => t.playlist);
   const panelOpen = useTripStore((s) => s.panelOpen);
   const selectedKey = useTripStore((s) => s.selectedKey);
   const selectionSource = useTripStore((s) => s.selectionSource);
@@ -77,7 +82,7 @@ export default function App() {
 
 /** Re-route whenever the set of placed stops changes. */
 function useRouteFetcher() {
-  const stops = useTripStore((s) => s.stops);
+  const stops = useTrip((t) => t.stops);
   const setRouteState = useTripStore((s) => s.setRouteState);
   const points = stops.flatMap((s) => (s.coord ? [s.coord] : []));
   const key = points.map((p) => p.join(',')).join(';');

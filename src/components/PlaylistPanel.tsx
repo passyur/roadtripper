@@ -5,10 +5,12 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
-import { useTripStore } from '../store/useTripStore';
+import { useTrip, useTripStore } from '../store/useTripStore';
 import { formatDrive } from '../lib/format';
 import type { SegmentResult } from '../lib/segmentRoute';
-import { ExternalIcon, FlagIcon } from './icons';
+import { ExternalIcon, FlagIcon, ShareIcon } from './icons';
+import { TripMenu } from './TripMenu';
+import { shareLink, useShareLink } from '../store/shareActions';
 import { SpotifyBar } from './SpotifyBar';
 import { TrackRow } from './TrackRow';
 import { TrackSearch } from './TrackSearch';
@@ -21,14 +23,15 @@ interface Props {
 }
 
 export function PlaylistPanel({ segments, onPreview, dragging }: Props) {
-  const playlist = useTripStore((s) => s.playlist);
+  const playlist = useTrip((t) => t.playlist);
   const selectedKey = useTripStore((s) => s.selectedKey);
   const selectionSource = useTripStore((s) => s.selectionSource);
   const hoveredKey = useTripStore((s) => s.hoveredKey);
-  const playlistName = useTripStore((s) => s.playlistName);
-  const source = useTripStore((s) => s.source);
-  const dirty = useTripStore((s) => s.dirty);
-  const { addTrack, removeEntry, moveEntry, select, hover, clearPlaylist, setPlaylistName } = useTripStore.getState();
+  const name = useTrip((t) => t.name);
+  const source = useTrip((t) => t.source);
+  const dirty = useTrip((t) => t.dirty);
+  const { addTrack, removeEntry, moveEntry, select, hover, setName } = useTripStore.getState();
+  const link = useShareLink();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -54,13 +57,16 @@ export function PlaylistPanel({ segments, onPreview, dragging }: Props) {
     <aside className="panel" aria-label="Playlist">
       <header className="panel__header">
         <div className="panel__title">
+          <div className="panel__name-row">
           <input
             className="panel__name"
-            value={playlistName}
-            onChange={(e) => setPlaylistName(e.target.value)}
-            aria-label="Playlist name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            aria-label="Trip name"
             spellCheck={false}
           />
+          <TripMenu />
+          </div>
           <p className="muted">
             {playlist.length} {playlist.length === 1 ? 'song' : 'songs'} · {formatDrive(totalMs / 1000)} ·{' '}
             {source.kind === 'spotify' ? (
@@ -73,9 +79,11 @@ export function PlaylistPanel({ segments, onPreview, dragging }: Props) {
             {dirty && source.kind === 'spotify' && <span className="panel__dirty"> · Unsaved changes</span>}
           </p>
         </div>
-        {playlist.length > 0 && (
-          <button className="link-button" onClick={clearPlaylist}>Clear</button>
-        )}
+        <div className="panel__header-actions">
+          <button className="link-button" disabled={!link} onClick={() => link && shareLink(link, name)} title="Copy a link to this trip">
+            <ShareIcon /> Share
+          </button>
+        </div>
       </header>
 
       <SpotifyBar />

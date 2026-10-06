@@ -2,7 +2,7 @@ import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, us
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { restrictToParentElement, restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { CSS } from '@dnd-kit/utilities';
-import { MAX_STOPS, useTripStore } from '../store/useTripStore';
+import { MAX_STOPS, useTrip, useTripStore } from '../store/useTripStore';
 import { formatDrive, formatMiles } from '../lib/format';
 import type { SegmentResult } from '../lib/segmentRoute';
 import type { Stop } from '../lib/types';
@@ -10,7 +10,7 @@ import { PlaceInput } from './PlaceInput';
 import { GripIcon, PlusIcon, XIcon } from './icons';
 
 export function RouteCard({ segments }: { segments: SegmentResult | null }) {
-  const stops = useTripStore((s) => s.stops);
+  const stops = useTrip((t) => t.stops);
   const route = useTripStore((s) => s.route);
   const status = useTripStore((s) => s.routeStatus);
   const error = useTripStore((s) => s.routeError);

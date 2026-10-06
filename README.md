@@ -17,6 +17,12 @@ Node isn't required; Bun runs Vite and Vitest. Use `127.0.0.1`, not `localhost` 
 
 `src/lib/segmentRoute.ts` takes the Mapbox route geometry plus a travel time for every line segment (Directions `annotations=duration`, scaled to match the headline ETA), accumulates time along the line, and cuts it at each song boundary, interpolating inside a segment when a song ends mid-segment. Songs past the arrival time are flagged `afterArrival`; if the playlist runs short, the rest of the route comes back as `silence`.
 
+## Trips and share links
+
+A **trip** is a route plus the playlist laid along it. Trips live in this browser's local storage; the trip menu (chevron next to the name) switches between them and can create, duplicate or delete them. Only playlists sync to Spotify — a duplicated trip starts as an unlinked draft so two trips never save over the same Spotify playlist.
+
+**Share** copies a link with the whole trip compressed into the URL fragment (`#trip=…`, never sent to a server): stops plus each song's id, title, artist, length and cover-art id. It has to be self-contained because Spotify no longer lets apps batch-look-up tracks or read other people's playlists. Opening a link adds the trip (or switches to the copy already added from that link). `src/lib/share.ts` validates links as untrusted input — size caps, Spotify-shaped track ids, cover art only from Spotify's CDN.
+
 ## Spotify
 
 - **Search** works logged out: `/api/spotify-token` hands the browser a client-credentials token (the secret stays server-side — Vite middleware in dev, the Cloudflare Worker in `worker/` in production). Logged-in users search with their own token.
@@ -51,7 +57,8 @@ bunx wrangler deploy
 - `src/components/MapView.tsx` — Mapbox map, colored song segments, hover popups, stop pins
 - `src/components/RouteCard.tsx` — origin / waypoints / destination with autocomplete and drag-to-reorder
 - `src/components/PlaylistPanel.tsx` — sortable playlist (dnd-kit); the map repaints live while dragging
-- `src/store/useTripStore.ts` — Zustand store, persisted to localStorage
+- `src/store/useTripStore.ts` — Zustand store of trips, persisted to localStorage
+- `src/components/TripMenu.tsx`, `src/store/shareActions.ts`, `src/lib/share.ts` — trip switcher and share links
 - `src/components/SpotifyBar.tsx`, `ImportDialog.tsx` — login, save, import
 - `src/lib/spotify.ts` — Spotify Web API client (post–February 2026 endpoints)
 - `src/store/spotifyActions.ts` — login handshake, save, import

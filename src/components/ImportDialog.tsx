@@ -6,7 +6,6 @@ import { XIcon } from './icons';
 
 export function ImportDialog({ onClose }: { onClose: () => void }) {
   const user = useTripStore((s) => s.user)!;
-  const dirty = useTripStore((s) => s.dirty);
   const [playlists, setPlaylists] = useState<PlaylistSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -19,7 +18,6 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
   }, [user]);
 
   const pick = async (p: PlaylistSummary) => {
-    if (dirty && !confirm(`Replace the current playlist with “${p.name}”? Unsaved changes will be lost.`)) return;
     setLoadingId(p.id);
     try {
       await importPlaylist(p);
