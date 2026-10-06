@@ -1,6 +1,7 @@
 name = "roadtripper-token"
 main = "index.ts"
 compatibility_date = "2026-10-01"
+workers_dev = true
 
 [vars]
 SPOTIFY_CLIENT_ID = "9dc49921048042b3a380625a1f88479d"
